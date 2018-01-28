@@ -1392,14 +1392,26 @@ void Planner::_buffer_steps(const int32_t (&target)[ABCE], float fr_mm_s, const 
     block->use_advance_lead =  esteps && (block->steps[X_AXIS] || block->steps[Y_AXIS])
                             && extruder_advance_k
                             && (uint32_t)esteps != block->step_event_count
-                            && lin_dist_e > 0;
-    if (block->use_advance_lead)
-      block->abs_adv_steps_multiplier8 = LROUND(
-        extruder_advance_k
-        * (UNEAR_ZERO(advance_ed_ratio) ? lin_dist_e / lin_dist_xy : advance_ed_ratio) // Use the fixed ratio, if set
-        * (block->nominal_speed / (float)block->nominal_rate)
-        * axis_steps_per_mm[E_AXIS_N] * 256.0
-      );
+                            && de > 0;
+
+    if (block->use_advance_lead) {
+      const float e_accel_sq = sq(target_float[E_AXIS] - position_float[E_AXIS]) / (sq(target_float[X_AXIS] - position_float[X_AXIS]) + sq(target_float[Y_AXIS] - position_float[Y_AXIS])) * sq(block->acceleration);
+      block->advance_speed = 200000000 / (extruder_advance_V * e_accel_sq * axis_steps_per_mm[E_AXIS]); // 2000000 / (extruder_advance_V * 0.01 * e_accel_sq * axis_steps_per_mm[E_AXIS]) == 200000000 / (extruder_advance_V * e_accel_sq * axis_steps_per_mm[E_AXIS])
+      /*SERIAL_ECHO(e_accel);
+      SERIAL_ECHO(';');
+      SERIAL_ECHOLN(extruder_advance_V * 0.01 * sq(e_accel));*/
+
+      const float jerklimit = 2000000 / (max_jerk[E_AXIS] * axis_steps_per_mm[E_AXIS]);
+      if (block->advance_speed < jerklimit) {
+        block->advance_speed = jerklimit;
+        SERIAL_ECHOLNPGM("WARNING: LIN_ADVANCE needed speed offset exceeds jerk limit. Reduce V or print acceleration.");
+      }
+    }
+
+    position_float[X_AXIS] = target_float[X_AXIS];
+    position_float[Y_AXIS] = target_float[Y_AXIS];
+    position_float[Z_AXIS] = target_float[Z_AXIS];
+    position_float[E_AXIS] = target_float[E_AXIS];
 
   #endif // LIN_ADVANCE
 
