@@ -110,25 +110,7 @@ volatile uint32_t Stepper::step_events_completed = 0; // The number of step even
            Stepper::nextAdvanceISR = ADV_NEVER,
            Stepper::eISR_Rate = ADV_NEVER;
 
-  volatile int Stepper::e_steps[E_STEPPERS];
-  int Stepper::final_estep_rate,
-      Stepper::current_estep_rate[E_STEPPERS],
-      Stepper::current_adv_steps[E_STEPPERS];
-
-  /**
-   * See https://github.com/MarlinFirmware/Marlin/issues/5699#issuecomment-309264382
-   *
-   * This fix isn't perfect and may lose steps - but better than locking up completely
-   * in future the planner should slow down if advance stepping rate would be too high
-   */
-  FORCE_INLINE uint16_t adv_rate(const int steps, const uint16_t timer, const uint8_t loops) {
-    if (steps) {
-      const uint16_t rate = (timer * loops) / abs(steps);
-      //return constrain(rate, 1, ADV_NEVER - 1)
-      return rate ? rate : 1;
-    }
-    return ADV_NEVER;
-  }
+  int8_t Stepper::e_steps[E_STEPPERS];
 
 #endif // LIN_ADVANCE
 
@@ -792,6 +774,10 @@ void Stepper::isr() {
   if (all_steps_done) {
     current_block = NULL;
     planner.discard_current_block();
+    
+    #if ENABLED(LIN_ADVANCE)
+      eISR_Rate = ADV_NEVER;
+    #endif
   }
   #if DISABLED(LIN_ADVANCE)
     _ENABLE_ISRs(); // re-enable ISRs

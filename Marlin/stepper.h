@@ -125,12 +125,8 @@ class Stepper {
 
       static uint16_t nextMainISR, nextAdvanceISR, eISR_Rate;
       #define _NEXT_ISR(T) nextMainISR = T
-      static volatile int e_steps[E_STEPPERS];
-      static int final_estep_rate;
-      static int current_estep_rate[E_STEPPERS]; // Actual extruder speed [steps/s]
-      static int current_adv_steps[E_STEPPERS];  // The amount of current added esteps due to advance.
-                                                 // i.e., the current amount of pressure applied
-                                                 // to the spring (=filament).
+      static int8_t e_steps[E_STEPPERS];
+      
     #else // !LIN_ADVANCE
 
       #define _NEXT_ISR(T) OCR1A = T
