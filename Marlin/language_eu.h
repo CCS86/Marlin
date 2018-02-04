@@ -141,7 +141,7 @@
 #define MSG_FILAMENT                        _UxGT("Harizpia")
 #define MSG_VOLUMETRIC_ENABLED              _UxGT("E mm3-tan")
 #define MSG_FILAMENT_DIAM                   _UxGT("Hariz. Dia.")
-#define MSG_ADVANCE_K                       _UxGT("K Aurrerapena")
+#define MSG_ADVANCE_V                       _UxGT("K Aurrerapena")
 #define MSG_CONTRAST                        _UxGT("LCD kontrastea")
 #define MSG_STORE_EEPROM                    _UxGT("Gorde memoria")
 #define MSG_LOAD_EEPROM                     _UxGT("Kargatu memoria")
