@@ -108,7 +108,8 @@ volatile uint32_t Stepper::step_events_completed = 0; // The number of step even
 
   uint16_t Stepper::nextMainISR = 0,
            Stepper::nextAdvanceISR = ADV_NEVER,
-           Stepper::eISR_Rate = ADV_NEVER;
+           Stepper::eISR_Rate = ADV_NEVER,
+           Stepper::current_adv_steps = 0;
 
   volatile int Stepper::e_steps[E_STEPPERS];
 
@@ -685,8 +686,10 @@ void Stepper::isr() {
     #if ENABLED(LIN_ADVANCE)
 
       if (current_block->use_advance_lead) {
-        eISR_Rate = current_block->advance_speed;
-        if (step_events_completed == step_loops) nextAdvanceISR = 0; // Wake up eISR on first acceleration loop
+        if (step_events_completed == step_loops || (e_steps[TOOL_E_INDEX] && eISR_Rate != current_block->advance_speed)) {
+          nextAdvanceISR = 0; // Wake up eISR on first acceleration loop and fire ISR if final adv_rate is reached
+          eISR_Rate = current_block->advance_speed;
+        }
       } else {
         eISR_Rate = ADV_NEVER;
         if (e_steps[TOOL_E_INDEX]) nextAdvanceISR = 0;
@@ -716,8 +719,10 @@ void Stepper::isr() {
     #if ENABLED(LIN_ADVANCE)
 
       if (current_block->use_advance_lead) {
-        eISR_Rate = current_block->advance_speed;
-        if (step_events_completed <= (uint32_t)current_block->decelerate_after + step_loops) nextAdvanceISR = 0; // Wake up eISR on first deceleration loop
+        if (step_events_completed <= (uint32_t)current_block->decelerate_after + step_loops || (e_steps[TOOL_E_INDEX] && eISR_Rate != current_block->advance_speed)) {
+          nextAdvanceISR = 0; // Wake up eISR on first deceleration loop
+          eISR_Rate = current_block->advance_speed;
+        }
       } else {
         eISR_Rate = ADV_NEVER;
         if (e_steps[TOOL_E_INDEX]) nextAdvanceISR = 0;
@@ -729,9 +734,8 @@ void Stepper::isr() {
 
     #if ENABLED(LIN_ADVANCE)
 
-      eISR_Rate = ADV_NEVER;
       // If we have esteps to execute, fire the next advance_isr "now"
-      if (e_steps[TOOL_E_INDEX]) nextAdvanceISR = 0;
+      if (e_steps[TOOL_E_INDEX] && eISR_Rate != current_block->advance_speed) nextAdvanceISR = 0;
 
     #endif
 
@@ -789,10 +793,29 @@ void Stepper::isr() {
         E## INDEX ##_STEP_WRITE(INVERT_E_STEP_PIN); \
       }
 
-    if (step_events_completed <= (uint32_t)current_block->accelerate_until)
-      e_steps[0]++;
-    else  if (step_events_completed > (uint32_t)current_block->decelerate_after)
-      e_steps[0]--;
+    if (current_block) {
+      if (current_block->use_advance_lead) {
+        if (step_events_completed > (uint32_t)current_block->decelerate_after && current_adv_steps > current_block->final_adv_steps) {
+          e_steps[0]--;
+          current_adv_steps--;
+          nextAdvanceISR = eISR_Rate;
+        }
+        else if (step_events_completed < (uint32_t)current_block->decelerate_after && current_adv_steps < current_block->max_adv_steps) {
+          e_steps[0]++;
+          current_adv_steps++;
+          nextAdvanceISR = eISR_Rate;
+        }
+        else {
+          nextAdvanceISR = ADV_NEVER;
+          eISR_Rate = ADV_NEVER;
+        }
+      }
+      else
+        nextAdvanceISR = ADV_NEVER;
+    }
+    else {
+      nextAdvanceISR = eISR_Rate;
+    }
     
     SET_E_STEP_DIR(0);
     #if E_STEPPERS > 1

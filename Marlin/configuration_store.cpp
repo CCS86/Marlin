@@ -221,7 +221,7 @@ typedef struct SettingsDataStruct {
   //
   // LIN_ADVANCE
   //
-  float planner_extruder_advance_V;                     // M900 V    planner.extruder_advance_V
+  float planner_extruder_advance_K;                     // M900 K    planner.extruder_advance_K
 
   //
   // HAS_MOTOR_CURRENT_PWM
@@ -761,10 +761,10 @@ void MarlinSettings::postprocess() {
     // Linear Advance
     //
 
-    _FIELD_TEST(planner_extruder_advance_V);
+    _FIELD_TEST(planner_extruder_advance_K);
 
     #if ENABLED(LIN_ADVANCE)
-      EEPROM_WRITE(planner.extruder_advance_V);
+      EEPROM_WRITE(planner.extruder_advance_K);
     #else
       dummy = 0.0f;
       EEPROM_WRITE(dummy);
@@ -1284,10 +1284,10 @@ void MarlinSettings::postprocess() {
       // Linear Advance
       //
 
-      _FIELD_TEST(planner_extruder_advance_V);
+      _FIELD_TEST(planner_extruder_advance_K);
 
       #if ENABLED(LIN_ADVANCE)
-        EEPROM_READ(planner.extruder_advance_V);
+        EEPROM_READ(planner.extruder_advance_K);
       #else
         EEPROM_READ(dummy);
       #endif
@@ -1758,7 +1758,7 @@ void MarlinSettings::reset() {
   #endif
 
   #if ENABLED(LIN_ADVANCE)
-    planner.extruder_advance_V = LIN_ADVANCE_V;
+    planner.extruder_advance_K = LIN_ADVANCE_K;
   #endif
 
   #if HAS_MOTOR_CURRENT_PWM
@@ -2316,7 +2316,7 @@ void MarlinSettings::reset() {
         SERIAL_ECHOLNPGM("Linear Advance:");
       }
       CONFIG_ECHO_START;
-      SERIAL_ECHOLNPAIR("  M900 V", planner.extruder_advance_V);
+      SERIAL_ECHOLNPAIR("  M900 K", planner.extruder_advance_K);
     #endif
 
     #if HAS_MOTOR_CURRENT_PWM
